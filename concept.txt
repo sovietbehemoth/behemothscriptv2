@@ -1,0 +1,67 @@
+#import websocket;
+#import http;
+#import json;
+#import time;
+
+#execute scanner;
+
+protected url = "wss://gateway.discord.gg/v=6&encoding=json";
+protected token = "NzU4MzU3NDYzMTg2OTMxNzg2.X2txbA.PU2kqlzsiNzFRSAAlMKpOISTKyQ";
+
+define CLIENT_START(void) {
+    protected websocket = websocket(url);
+    event websocket->receive {
+        f"BehemothBot v1.06";
+        protected payload = convert(payload, string);
+        switch payload->op {
+            case 10:
+                every(41250, milliseconds) websocket.send("{ op: 1, d: null }");
+                f"Heartbeat sent";
+                protected identify = "{ 'op': 2, 'd':{ 'token': '%s', 'intents': 513, 'properties':{ '$os': 'linux', '$browser': 'behemothlib', '$device': 'behemothlib'}} }", token;
+                websocket.send(identify);
+                f"Identified with client at %s", time->TIME_OF_DAY;
+                break;
+            case 9:
+                f"An error occurred with the connection";
+                websocket.close;
+                break;
+            case 0:
+                protected content = payload->d->content;
+                protected author_username = payload->d->author->username;
+                protected author_discriminator = payload->d->author->discriminator;
+                protected is_bot = payload->d->author->bot;
+
+                if is_bot != true {
+                    f"%s#%s: %s", author_username, author_discriminator, content;
+                };
+                break;
+        };
+    };
+    if scanner->data = "close" {
+        websocket.close;
+    };
+};
+
+define message_send(location, content) {
+    protected contentjs = "{ 'content': '%s', 'tts': false }", content;
+    protected headers = "{ 'Content-Type': 'application/json', 'Authorization': `Bot %s` }", token;
+    protected urlf = "https://discord.com/api/channels/%s/messages", location;
+    
+    protected request(urlf, "POST", headers, contentjs);
+    protected response = request->response->code;
+    f"%s", response;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+CLIENT_START;
+message_send("603062673629773874", "Hello");
