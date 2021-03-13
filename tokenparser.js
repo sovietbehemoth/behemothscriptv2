@@ -353,6 +353,93 @@ function conditional_logic_manager(condition) {
             else if (idval1 < idval2 || idval1 === idval2) return false;
             } else throw `ParserError: Undefined reference to '${val2}'`;
         }
+    } else if (condition.includes("===")) {
+        const val1 = condition.split("===")[0].trim();
+        const val2 = condition.split("===")[1].trim();
+        if (typeof parseInt(val1) === "number" && typeof parseInt(val2) === "number") {
+            if (val1 === val2) return true;
+            else return false;
+        } else if (VAR_DEFINE_NAME.includes(val1)) {
+            const idval1 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val1)];
+            if (PROTECTED_DEFINE_NAME.includes(val2)) {
+            const idval2 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val2)];
+            if (idval1 === idval2) return true;
+            else return false;
+            } else if (VAR_DEFINE_NAME.includes(val2)) {
+            const idval2 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val2)]
+            if (idval1 === idval2) return true;
+            else return false;
+            } else throw `ParserError: Undefined reference to '${val2}'`;
+        } else if (PROTECTED_DEFINE_NAME.includes(val1)) {
+            const idval1 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val1)]
+            if (PROTECTED_DEFINE_NAME.includes(val2)) {
+            const idval2 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val2)]
+            if (idval1 === idval2) return true;
+            else return false;
+            } else if (VAR_DEFINE_NAME.includes(val2)) {
+            const idval2 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val2)];
+            if (idval1 === idval2) return true;
+            else return false;
+            } else throw `ParserError: Undefined reference to '${val2}'`;
+        }
+    } else if (condition.includes("==")) {
+        const val1 = condition.split("==")[0].trim();
+        const val2 = condition.split("==")[1].trim();
+        if (typeof parseInt(val1) === "number" && typeof parseInt(val2) === "number") {
+            if (val1 == val2) return true;
+            else return false;
+        } else if (VAR_DEFINE_NAME.includes(val1)) {
+            const idval1 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val1)];
+            if (PROTECTED_DEFINE_NAME.includes(val2)) {
+            const idval2 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val2)];
+            if (idval1 == idval2) return true;
+            else return false;
+            } else if (VAR_DEFINE_NAME.includes(val2)) {
+            const idval2 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val2)]
+            if (idval1 == idval2) return true;
+            else return false;
+            } else throw `ParserError: Undefined reference to '${val2}'`;
+        } else if (PROTECTED_DEFINE_NAME.includes(val1)) {
+            const idval1 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val1)]
+            if (PROTECTED_DEFINE_NAME.includes(val2)) {
+            const idval2 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val2)]
+            if (idval1 == idval2) return true;
+            else return false;
+            } else if (VAR_DEFINE_NAME.includes(val2)) {
+            const idval2 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val2)];
+            if (idval1 == idval2) return true;
+            else return false;
+            } else throw `ParserError: Undefined reference to '${val2}'`;
+        }
+    } else if (condition.includes("=")) {
+        const val1 = condition.split("=")[0].trim();
+        const val2 = condition.split("=")[1].trim();
+        if (typeof parseInt(val1) === "number" && typeof parseInt(val2) === "number") {
+            if (val1 = val2) return true;
+            else return false;
+        } else if (VAR_DEFINE_NAME.includes(val1)) {
+            const idval1 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val1)];
+            if (PROTECTED_DEFINE_NAME.includes(val2)) {
+            const idval2 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val2)];
+            if (idval1 = idval2) return true;
+            else return false;
+            } else if (VAR_DEFINE_NAME.includes(val2)) {
+            const idval2 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val2)]
+            if (idval1 = idval2) return true;
+            else return false;
+            } else throw `ParserError: Undefined reference to '${val2}'`;
+        } else if (PROTECTED_DEFINE_NAME.includes(val1)) {
+            const idval1 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val1)]
+            if (PROTECTED_DEFINE_NAME.includes(val2)) {
+            const idval2 = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(val2)]
+            if (idval1 = idval2) return true;
+            else return false;
+            } else if (VAR_DEFINE_NAME.includes(val2)) {
+            const idval2 = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(val2)];
+            if (idval1 = idval2) return true;
+            else return false;
+            } else throw `ParserError: Undefined reference to '${val2}'`;
+        }
     }
 }
 // VAR < CONST, VAR < VAR, CONST < CONST, CONST < VAR
@@ -361,7 +448,7 @@ function if_statement_init(contents, fulldocument) {
     const execution_data = fulldocument.join(" ").substring(locate_opening_bracket(contents, fulldocument)[0] + 1, locate_opening_bracket(contents, fulldocument)[1]).trim();
     if (contents.includes("{")) {
         const condition = contents.split("{")[0].split("if")[1].trim();
-        const result = conditional_logic_manager(condition);
+        var result = conditional_logic_manager(condition);
         CONDITIONAL_STATEMENT_TEMPORARY_DATA = execution_data.split(";").length;
         if (result === true) {
             CONDITIONAL_CONDITION_STACK.push(condition);
