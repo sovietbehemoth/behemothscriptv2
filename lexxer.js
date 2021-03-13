@@ -71,7 +71,9 @@ async function init_lexer(...contentsF) {
             //variable calls
             if (VAR_DEFINE_NAME.includes(contents[i])) variable_mention_init(contents[i], "VAR");
             else if (PROTECTED_DEFINE_NAME.includes(contents[i])) variable_mention_init(contents[i], "PROTECTED");
-        } 
+        }  else if (contents[i].trim().startsWith("event")) {
+            
+        }
     }
     //Checks for unused variables and such
     final_scanner();
