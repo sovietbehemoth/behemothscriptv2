@@ -1,6 +1,7 @@
 import { specer_parser } from "./utils.js";
 import { init_lexer } from "./lexxing.js";
 import { _debug } from "./lexxing.js";
+import WebSocket from "ws";
 
 var VAR_DEFINE_NAME = [];
 var VAR_DEFINE_VALUE = [];
@@ -43,10 +44,24 @@ function convert_string(DEF_CHAR_ARRAY_OP, i) {
 }
 
 function variable_mention_init(content, mentioned) {
-    
 }
 
-function def_parser(contents) {
+function event_init(contents) {
+    const typeof_event = contents.split("event")[1].split("{")[0].split(" ");
+    const event_item = typeof_event[0].split("->");
+    switch (event_item[0]) {
+        case "websocket":
+            if (VAR_DEFINE_NAME.includes(event_item[1])) {
+                const urltarget = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(event_item[1])].substring(VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(event_item[1])].indexOf("("), VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(event_item[1])].indexOf(")"));
+                if (event_item[2] === "receive") {
+                    const websocket_init = new WebSocket(urltarget);
+                }
+            }
+            break;
+    }
+}
+
+function def_parser(contents, type) {
     if (contents.includes("/") && !contents.includes('"') || contents.includes("*") && !contents.includes('"') || contents.includes("-") && !contents.includes('"') || contents.includes("+") && !contents.includes('"')) {
         if (_debug === true) console.log("BehemothScript: Parsing math logic");
         var DEF_CHAR_ARRAY_OP = contents.split(" ");
@@ -134,6 +149,10 @@ function def_parser(contents) {
     } else if (typeof parseInt(contents) === "number") {
         if (_debug === true) console.log("BehemothScript: Intializing integer definition");
         return contents;
+    } else if (contents.startsWith("websocket") && IMPORT_STACK.includes("websocket")) {
+        return contents
+    } else if (undefined) {
+
     } else {
         if (_debug === true) console.log("BehemothScript: Searching for variable references");
         var INIT_VAL;
@@ -448,12 +467,65 @@ function if_statement_init(contents, fulldocument) {
     const execution_data = fulldocument.join(" ").substring(locate_opening_bracket(contents, fulldocument)[0] + 1, locate_opening_bracket(contents, fulldocument)[1]).trim();
     if (contents.includes("{")) {
         const condition = contents.split("{")[0].split("if")[1].trim();
-        var result = conditional_logic_manager(condition);
-        CONDITIONAL_STATEMENT_TEMPORARY_DATA = execution_data.split(";").length;
-        if (result === true) {
-            CONDITIONAL_CONDITION_STACK.push(condition);
-            CONDITIONAL_STATEMENT_STACK.push(execution_data);
-            init_lexer(execution_data);
+        if (!condition.includes("&&") && !condition.includes("||")) {
+            var result = conditional_logic_manager(condition);
+            CONDITIONAL_STATEMENT_TEMPORARY_DATA = execution_data.split(";").length;
+            if (result === true) {
+                CONDITIONAL_CONDITION_STACK.push(condition);
+                CONDITIONAL_STATEMENT_STACK.push(execution_data);
+                init_lexer(execution_data);
+            }
+        } else if (condition.includes("&&") && condition.includes("||")) {
+            var CONTINUE_ORDER = [];
+            const andgate = condition.split("&&");
+            for (let i = 0; i < andgate.length; i++) {
+                if (andgate[i].includes("||")) {
+                    var orgate = andgate[i].split("||");
+                    var CONDITIONS = [];
+                    var CONTINUE_ORDER = [];
+                    for (let i = 0; i < orgate.length; i++) {
+                        if (conditional_logic_manager(orgate[i]) === undefined) throw "ParserError: Internal logic error";
+                        if (conditional_logic_manager(orgate[i]) === false) CONDITIONS.push(false);
+                        if (conditional_logic_manager(orgate[i]) === true) CONDITIONS.push(true);
+                    }
+                    if (CONDITIONS.includes(true)) {
+                        CONTINUE_ORDER.push(true);
+                    } else CONTINUE_ORDER.push(false);
+                } else if (conditional_logic_manager(andgate[i]) === true) {
+                    CONTINUE_ORDER.push(true);
+                } else if (conditional_logic_manager(andgate[i]) === false) CONTINUE_ORDER.push(false);
+            }
+            if (!CONTINUE_ORDER.includes(false)) {
+                CONDITIONAL_CONDITION_STACK.push(condition);
+                CONDITIONAL_STATEMENT_STACK.push(execution_data);
+                init_lexer(execution_data);
+            }
+        } else if (condition.includes("&&") && !condition.includes("||")) {
+            const andgate = condition.split("&&");
+            var CONTINUE_ORDER = [];
+            for (let i = 0; i < andgate.length; i++) {
+                if (conditional_logic_manager(andgate[i]) === undefined) throw "ParserError: Internal logic error";
+                if (conditional_logic_manager(andgate[i]) === false) break; CONTINUE_ORDER.push(false);
+            }
+            if (!CONTINUE_ORDER.includes(false)) {
+                CONDITIONAL_CONDITION_STACK.push(condition);
+                CONDITIONAL_STATEMENT_STACK.push(execution_data);
+                init_lexer(execution_data);
+            }
+        } else if (!condition.includes("&&") && condition.includes("||")) {
+            const orgate = condition.split("||");
+            var CONDITIONS = [];
+            var CONTINUE_ORDER = [];
+            for (let i = 0; i < orgate.length; i++) {
+                if (conditional_logic_manager(orgate[i]) === undefined) throw "ParserError: Internal logic error";
+                if (conditional_logic_manager(orgate[i]) === false) CONDITIONS.push(false);
+                if (conditional_logic_manager(orgate[i]) === true) CONDITIONS.push(true);
+            }
+            if (CONDITIONS.includes(true)) {
+                CONDITIONAL_CONDITION_STACK.push(condition);
+                CONDITIONAL_STATEMENT_STACK.push(execution_data);
+                init_lexer(execution_data);
+            }
         }
     }
 }
