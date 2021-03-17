@@ -7,6 +7,7 @@ import { function_init } from "./tokenparser.js";
 import { function_void_params_init } from "./tokenparser.js";
 import { if_statement_init } from "./tokenparser.js";
 import { variable_mention_init } from "./tokenparser.js";
+import { websocket_init } from "./tokenparser.js";
 
 import { def_parser } from "./tokenparser.js";
 import { final_scanner } from "./utils.js";
@@ -71,8 +72,8 @@ async function init_lexer(...contentsF) {
             //variable calls
             if (VAR_DEFINE_NAME.includes(contents[i])) variable_mention_init(contents[i], "VAR");
             else if (PROTECTED_DEFINE_NAME.includes(contents[i])) variable_mention_init(contents[i], "PROTECTED");
-        }  else if (contents[i].trim().startsWith("event")) {
-            
+        }  else if (contents[i].trim().startsWith("websocket") && IMPORT_STACK.includes("websocket")) {
+            websocket_init(contents[i], contentsF);
         }
     }
     //Checks for unused variables and such
