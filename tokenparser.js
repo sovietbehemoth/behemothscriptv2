@@ -1,6 +1,7 @@
 import { specer_parser } from "./utils.js";
 import { init_lexer } from "./lexxing.js";
 import { _debug } from "./lexxing.js";
+import { integer_check } from "./utils.js";
 import WebSocket from "ws";
 
 var VAR_DEFINE_NAME = [];
@@ -24,6 +25,10 @@ var CONDITIONAL_CONDITION_STACK = [];
 var CONDITIONAL_STATEMENT_STACK = [];
 var CONDITIONAL_STATEMENT_TEMPORARY_DATA;
 
+var WEBSOCKET_NAME_STACK = [];
+var WEBSOCKET_URL_STACK = [];
+var WEBSOCKET_IDENTIY_STACK = [];
+
 function convert_string(DEF_CHAR_ARRAY_OP, i) {
     if (_debug === true) console.log("BehemothScript: Converting " + DEF_CHAR_ARRAY_OP[i] + " to integer");
     if (typeof DEF_CHAR_ARRAY_OP[i + 1] === "string" && DEF_CHAR_ARRAY_OP[i + 1] != " " && DEF_CHAR_ARRAY_OP[i + 1] != "-" && DEF_CHAR_ARRAY_OP[i + 1] != "x" && DEF_CHAR_ARRAY_OP[i + 1] != "+" && DEF_CHAR_ARRAY_OP[i + 1] != "*" && DEF_CHAR_ARRAY_OP[i + 1] != "/") {
@@ -46,19 +51,8 @@ function convert_string(DEF_CHAR_ARRAY_OP, i) {
 function variable_mention_init(content, mentioned) {
 }
 
-function event_init(contents) {
-    const typeof_event = contents.split("event")[1].split("{")[0].split(" ");
-    const event_item = typeof_event[0].split("->");
-    switch (event_item[0]) {
-        case "websocket":
-            if (VAR_DEFINE_NAME.includes(event_item[1])) {
-                const urltarget = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(event_item[1])].substring(VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(event_item[1])].indexOf("("), VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(event_item[1])].indexOf(")"));
-                if (event_item[2] === "receive") {
-                    const websocket_init = new WebSocket(urltarget);
-                }
-            }
-            break;
-    }
+function new_init(contents) {
+
 }
 
 function def_parser(contents, type) {
@@ -146,30 +140,40 @@ function def_parser(contents, type) {
         }
     } else if (contents.includes(".")) {
         specer_parser(contents);
-    } else if (typeof parseInt(contents) === "number") {
+    } else if (integer_check(contents) != false) {
         if (_debug === true) console.log("BehemothScript: Intializing integer definition");
         return contents;
-    } else if (contents.startsWith("websocket") && IMPORT_STACK.includes("websocket")) {
-        return contents
-    } else if (undefined) {
-
+    } else if (contents.startsWith("new")) {
+        const init_this = contents.split("new")[1].trim();
+        return [ init_this, "new" ];
     } else {
         if (_debug === true) console.log("BehemothScript: Searching for variable references");
         var INIT_VAL;
         var DATA_TYPE;
+        var PROTECTED_FAILSAFE;
         for (let i = 0; i < VAR_DEFINE_NAME.length; i++) {
             if (contents.startsWith(VAR_DEFINE_NAME[i])) INIT_VAL = VAR_DEFINE_NAME[i]; DATA_TYPE = "VAR";
         }
         if (INIT_VAL === undefined) {
             for (let i = 0; i < PROTECTED_DEFINE_NAME.length; i++) {
-                if (contents.startsWith(PROTECTED_DEFINE_NAME[i])) INIT_VAL = VAR_DEFINE_NAME[i]; DATA_TYPE = "PROTECTED";
+                if (contents.startsWith(PROTECTED_DEFINE_NAME[i])) INIT_VAL = PROTECTED_DEFINE_NAME[i]; DATA_TYPE = "PROTECTED"; PROTECTED_FAILSAFE = true;
             }
         }
-        if (INIT_VAL === undefined) throw `ParserError: Undefined reference to '${contents}'`; else;
+        if (INIT_VAL === undefined && PROTECTED_FAILSAFE != true) throw `ParserError: Undefined reference to '${contents}'`; else;
         if (DATA_TYPE === "VAR") finalstring = VAR_DEFINE_VALUE[VAR_DEFINE_NAME.indexOf(INIT_VAL)];
         else if (DATA_TYPE === "PROTECTED") finalstring = PROTECTED_DEFINE_VALUE[PROTECTED_DEFINE_NAME.indexOf(INIT_VAL)];
         return finalstring;
     }
+}
+
+function event_preparation(contents) {
+    const typeof_event = contents.split("event")[1].split("{")[0];
+    const event_item = typeof_event.split("->");
+    if (PROTECTED_DEFINE_NAME.includes(event_item[0].trim())) {
+        
+    } else if (VAR_DEFINE_NAME.includes(event_item[0].trim())) {
+
+    } else throw `ParserError: '${event_item[0].trim()}' does not exist`;
 }
 
 function printf(contents) {
@@ -218,7 +222,7 @@ function var_init(contents) {
 
     if (contents.split("var")[1].split("=")[0] != undefined && contents.includes("=")) {    
     name = contents.trim().split("var")[1].split("=")[0].trim();
-    equals = def_parser(contents.trim().split("var")[1].split("=")[1].trim());
+    equals = def_parser(contents.trim().split("var")[1].substring(contents.trim().split("var")[1].indexOf("=") + 2, contents.trim().split("var")[1].length).trim());
     } else {
         name = contents.trim().split(" ")[1].trim();
         equals = "%%UNDEFINED_VAR_VALUE%%";
@@ -234,7 +238,7 @@ function protected_init(contents) {
     var equals
     if (contents.split("protected")[1].split("=")[0] != undefined && contents.includes("=")) {    
     name = contents.trim().split("protected")[1].split("=")[0].trim();
-    equals = def_parser(contents.trim().split("protected")[1].split("=")[1].trim());
+    equals = def_parser(contents.trim().split("protected")[1].substring(contents.trim().split("protected")[1].indexOf("=") + 2, contents.trim().split("protected")[1].length).trim());
     } else {
         name = contents.trim().split(" ")[1].trim();
         equals = "%%UNDEFINED_PROTECTED_VALUE%%";
@@ -562,7 +566,7 @@ function function_call(contents) {
     var optional_args = 0;
 
     const function_name = contents.split("(")[0].trim();
-    const function_arguments = contents.substring(contents.indexOf("("), contents.indexOf(")"));
+    const function_arguments = contents.substring(contents.indexOf("(") + 1, contents.indexOf(")"));
     if (!function_arguments.length) {
         if (LOCAL_FUNCTION_PARAM_STACK[LOCAL_FUNCTION_NAME_STACK.indexOf(function_name)] === "void") {
             if (!LOCAL_FUNCTION_NAME_STACK.includes(contents.trim())) throw `ParserError: Function '${function_name}' does not exist`; else;
@@ -576,8 +580,8 @@ function function_call(contents) {
     if (LOCAL_FUNCTION_PARAM_STACK[LOCAL_FUNCTION_NAME_STACK.indexOf(function_name)] === "void") throw "Error: This function does not accept any arguments"; else;
     const function_data = LOCAL_FUNCTION_DATA_STACK[LOCAL_FUNCTION_NAME_STACK.indexOf(function_name)];
     for (let i = 0; i < function_params.length; i++) {
-        VAR_DEFINE_NAME.push(function_params[i]);
-        VAR_DEFINE_VALUE.push(function_arguments.split(",")[i]);
+        VAR_DEFINE_NAME.push(function_params[i].trim());
+        VAR_DEFINE_VALUE.push(def_parser(function_arguments.split(",")[i]));
         if (function_params[i].startsWith("*")) optional_args.push(function_params[i]);
     }
     const expected_args = function_params.length - optional_args.length;
@@ -599,12 +603,48 @@ function function_call(contents) {
 }
 }
 
+function websocket_init(contents, full) {
+    const order = contents.split("websocket");
+    if (order[1].trim().startsWith("open")) {
+        const open_websocket = def_parser(order[1].substring(order[1].indexOf("(") + 1, order[1].indexOf(")")));
+        const as_def = order[1].trim().split(")")[1].substring(3, order[1].trim().split(")")[1].length).trim();
+        if (as_def === undefined) throw "ParserError: WebSocket must be defined"; 
+        WEBSOCKET_NAME_STACK.push(as_def);
+        WEBSOCKET_URL_STACK.push(open_websocket);
+        WEBSOCKET_IDENTIY_STACK.push(new WebSocket(open_websocket));
+    } else if (order[1].trim().startsWith("on")) {
+        const on_def = order[1].trim().split(" ")[0].split("->")[1];
+        if (on_def.startsWith("data")) {
+            var CHECK_REALITY = [];
+            var URL;
+            var SOCKET;
+            const as_def = order[1].trim().split(")")[1].substring(3, order[1].trim().split(")")[1].indexOf("{")).trim();
+            const execution_data = contents.trim().substring(contents.trim().indexOf("{") + 1, contents.trim().length - 1).trim();
+            const this_websocket = order[1].substring(order[1].indexOf("(") + 1, order[1].indexOf(")"));
+            for (let i = 0; i < WEBSOCKET_NAME_STACK.length; i++) {
+                if (WEBSOCKET_NAME_STACK[i] === this_websocket) {
+                    CHECK_REALITY.push(true);
+                    URL = WEBSOCKET_URL_STACK[i];
+                    SOCKET = WEBSOCKET_IDENTIY_STACK[i];
+                }
+            } if (!CHECK_REALITY.includes(true)) throw "ParserError: WebSocket " + this_websocket + " does not exist";
+            SOCKET.onmessage = function(event) {
+                console.log(event)
+                VAR_DEFINE_NAME.push(as_def);
+                VAR_DEFINE_VALUE.push(event);
+                init_lexer(execution_data);
+            }
+        }
+    }
+}
+
 export { printf };
 export { var_init }
 export { protected_init };
 export { function_init };
 export { variable_mention_init };
 export { function_void_params_init };
+export { websocket_init };
 
 export { def_parser };
 export { bracer_master };
